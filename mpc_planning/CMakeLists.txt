@@ -12,7 +12,7 @@ find_package(Eigen3 REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES ${PROJECT_NAME}
+  LIBRARIES mpc_planning
   CATKIN_DEPENDS roscpp geometry_msgs nav_msgs eigen_conversions tf2_ros
   DEPENDS EIGEN3 
 )
@@ -29,7 +29,7 @@ include_directories(
 add_library(mpc_planning
   src/uav_model.cpp
   src/mpc_controller.cpp
-  src/mpc_planning_node.cpp
+  
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -42,7 +42,7 @@ add_executable(mpc_planning_node src/mpc_planning_node.cpp)
 
 
 target_link_libraries(mpc_planning_node
-  ${PROJECT_NAME}
+  mpc_planning
   ${catkin_LIBRARIES}
 ) 
 

@@ -2,8 +2,8 @@
 #include "mpc_planning/uav_model.h"
 #include "mpc_planning/mpc_controller.h"
 #include <geometry_msgs/Point.h>
-#include <geometry_msgs/Vector3.h>
-
+#include <geometry_msgs/Twist.h>
+#include <memory>
 
 
 class MpcPlanningNode {
@@ -19,15 +19,14 @@ public:
        uav_model_ = std::make_shared<mpc_planning::UAVModel>(dt);
        mpc_controller_ = std::make_shared<mpc_planning::MPCController>(dt, horizon);
         
-       // 只需要订阅位置信息
-       pose_sub_ = nh_.subscribe("uav/pose", 1, 
-        &MpcPlanningNode::poseCallback, this);
+       // 订阅x,y坐标
+       pose_sub_ = nh_.subscribe("uav/pose", 1, &MpcPlanningNode::poseCallback, this);
 
-       // 发布Vector3速度指令
-       cmd_pub_ = nh_.advertise<geometry_msgs::Vector3>("cmd_vel", 1);
+       // 发布xy方向速度
+       vel_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd_vel", 10);
         
-       control_timer_ = nh_.createTimer(ros::Duration(dt),
-           &MpcPlanningNode::controlCallback, this);
+       //mpc控制部分
+       control_timer_ = nh_.createTimer(ros::Duration(dt),&MpcPlanningNode::controlCallback, this);
     }
 private:
     void poseCallback(const geometry_msgs::Point::ConstPtr& msg) {
@@ -41,19 +40,21 @@ private:
         // 计算控制输入（速度）
         Eigen::Vector2d control = mpc_controller_->solve(uav_model_->getState());
             
-        // 发布Vector3速度指令
-        geometry_msgs::Vector3 cmd_vel;
-        cmd_vel.x = control(0);
-        cmd_vel.y = control(1);
-        cmd_vel.z = 0.0;  // z方向速度设为0
-        cmd_pub_.publish(cmd_vel);
+        // 发布底盘速度指令
+        geometry_msgs::Twist vvv;
+        // vvv.linear.x = control(0);
+        // vvv.linear.y = control(1);
+        vvv.linear.x = 0.1;
+        vvv.linear.y = 0.1;
+        vvv.linear.z = 0.0;  
+        vel_pub_.publish(vvv);
     }
 
     ros::NodeHandle nh_;
-    std::shared_ptr<mpc_planning::UAVModel> uav_model_;
-    std::shared_ptr<mpc_planning::MPCController> mpc_controller_;
-    ros::Subscriber pose_sub_;
-    ros::Publisher cmd_pub_;
+    std::shared_ptr<mpc_planning::UAVModel> uav_model_;//共享指针防止内存泄露
+    std::shared_ptr<mpc_planning::MPCController> mpc_controller_;//共享指针防止内存泄露
+    ros::Subscriber pose_sub_;//用来订阅当前位置（状态）
+    ros::Publisher vel_pub_;//用来发布速度（系统输入）
     ros::Timer control_timer_;
     geometry_msgs::Point current_position_;  // 只存储当前xy位置
 };
@@ -66,7 +67,6 @@ int main(int argc, char** argv) {
     int n = 2;  // 变量数量
     int m = 3;  // 约束数量
 
-    // TODO: 实现节点逻辑
     
     ros::spin();
     return 0;

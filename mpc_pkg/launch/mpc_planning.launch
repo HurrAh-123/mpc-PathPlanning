@@ -1,9 +1,0 @@
-<launch>
-
-  <node  pkg="mpc_pkg" type="mpc_planning_node" name="mpc_planning_node"output="screen">
-    <!-- <remap from="uav/pose" to="/uav/pose" />
-    <remap from="cmd_vel" to="/cmd_vel" /> 话题映射，多无人机再考虑-->
-    <param name="dt" type="double" value="0.1" />  <!-- 时间步长 -->
-    <param name="horizon" type="int" value="10" />  <!-- 预测时域 -->
-  </node>
-</launch>

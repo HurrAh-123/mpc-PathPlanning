@@ -17,4 +17,6 @@
   <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
   <!-- 发布机器人状态 -->
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+  <!--rviz-->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find my_robot)/rviz/1.rviz"/>
 </launch>

@@ -1,0 +1,8 @@
+<launch>
+ 
+  <node  pkg="mpc_planning" type="mpc_planning_node" name="mpc_planning_node" output="screen">
+    <remap from="/mpc_planning_node/cmd_vel" to="/cmd_vel"/>
+    <param name="dt" type="double" value="0.1" />  <!-- 时间步长 -->
+    <param name="horizon" type="int" value="10" />  <!-- 预测时域 -->
+  </node>
+</launch>
