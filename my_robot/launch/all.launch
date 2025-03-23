@@ -1,0 +1,12 @@
+<launch>
+    <!-- 启动无人机+圆柱体障碍物 -->
+    <include file="$(find my_robot)/launch/robot1.launch"/>
+    <include file="$(find my_robot)/launch/movetest_node.launch"/>
+
+    <!-- 启动激光雷达障碍物检测+卡尔曼状态跟踪 -->
+    <include file="$(find lidar_pkg)/launch/obs.launch"/>   
+
+    
+
+
+</launch>
