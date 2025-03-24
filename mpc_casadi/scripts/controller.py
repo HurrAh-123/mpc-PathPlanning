@@ -10,57 +10,48 @@ from std_msgs.msg import Float32MultiArray
 
 class Controller():
     def __init__(self):
-        self.N = 10
+       
         self.rate = rospy.Rate(50)
 
+        #订阅local_planner的话题，获取mpc计算出来的1*50的速度矩阵
         self.local_plan_sub = rospy.Subscriber('/local_plan', Float32MultiArray, self.local_planner_cb)
+
+        #发布速度话题cmd_vel 
         self.vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+
+        #发布当前状态话题curr_state,1*2的矩阵
         self.curr_state_pub = rospy.Publisher('/curr_state', Float32MultiArray, queue_size=10)
 
         self.__timer_localization = rospy.Timer(rospy.Duration(0.01), self.get_current_state)
         self.listener = tf.TransformListener()
 
-        self.linear_speed = self.angular_speed = 0.0
-        self.local_plan = np.zeros([self.N, 2])
 
-        self.control_loop()
 
-    def quart_to_rpy(self, x, y, z, w):
-        r = math.atan2(2*(w*x+y*z), 1-2*(x*x+y*y))
-        p = math.asin(2*(w*y-z*x))
-        y = math.atan2(2*(w*z+x*y), 1-2*(z*z+y*y))
-        return r, p, y
-
+    # ros定时器，发布当前状态x，y，1*2的矩阵
     def get_current_state(self, event):
         try:
+            # 获取从'base_link'到'world'坐标系的变换
+            # trans: [x, y, z]位置
+            # rot: [x, y, z, w]四元数表示的旋转
             (trans, rot) = self.listener.lookupTransform('world', 'base_link', rospy.Time(0))
-            _, _, yaw = self.quart_to_rpy(rot[0], rot[1], rot[2], rot[3])
+
             curr_state = Float32MultiArray()
-            curr_state.data = [trans[0], trans[1], yaw]
+            curr_state.data = [trans[0], trans[1]]
             self.curr_state_pub.publish(curr_state)
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             pass
 
-    def pub_vel(self):
-        control_cmd = Twist()
-        control_cmd.linear.x = self.linear_speed
-        control_cmd.angular.z = self.angular_speed
-        rospy.loginfo("Linear Speed: %.1f, Angular Speed: %.1f" % (self.linear_speed, self.angular_speed))
-        self.vel_pub.publish(control_cmd)
-
-    def control_loop(self):
-        while not rospy.is_shutdown():
-            self.linear_speed = self.local_plan[0, 0]
-            self.angular_speed = self.local_plan[0, 1]
-            self.pub_vel()
-            self.rate.sleep()
-
+    # 订阅local_planner的话题，获取速度命令，然后发布cmd_vel话题
+    #不知道为什么local_planner.py不直接发布，要来这么迂回一下
     def local_planner_cb(self, msg):
-        for i in range(self.N):
-            self.local_plan[i, 0] = msg.data[0+2*i]
-            self.local_plan[i, 1] = msg.data[1+2*i]
+        control_cmd = Twist()
+        control_cmd.linear.x = msg.data[0]
+        control_cmd.linear.y = msg.data[1]
+        rospy.loginfo("x: %.1f, y: %.1f" % (control_cmd.linear.x, control_cmd.linear.y))
+        self.vel_pub.publish(control_cmd)
 
 
 if __name__ == '__main__':
-    rospy.init_node('control')
+    rospy.init_node('controller')
     controller = Controller()
+    rospy.spin()

@@ -1,0 +1,7 @@
+<launch>
+    <node pkg="global_path" type="global_path" output="screen" name="global_path">  
+        <param name="start_x" value="-10.0"/> 
+        <param name="start_y" value="0.0"/>   
+    </node>
+
+</launch>

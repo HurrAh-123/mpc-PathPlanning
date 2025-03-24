@@ -16,11 +16,11 @@ const size_t obs_kf_buffer_size = 100;
 
 struct Ellipse
 {
-  double semimajor;  // Length of semi-major axis
-  double semiminor;  // Length of semi-minor axis
-  double cx;         // x-coordinate of center
-  double cy;         // y-coordinate of center
-  double theta;      // Rotation angle
+  double semimajor;  // 长轴
+  double semiminor;  // 短轴
+  double cx;         // 中心x坐标
+  double cy;         // 中心y坐标
+  double theta;      // 旋转角度
 };
 
 struct obs_param
@@ -42,7 +42,7 @@ public:
   Kalman ka;
   std::vector<obs_param> param_list;
   std::vector<obs_param> pred_list;
-  Eigen::VectorXd x;
+  Eigen::VectorXd x; //未定义大小的向量
   Eigen::MatrixXd P0;
   Eigen::MatrixXd Q;
   Eigen::MatrixXd R;
@@ -58,29 +58,34 @@ public:
 
 obs_kf::obs_kf() : N(25)
 {
-  ka.m_StateSize = 9;
-  ka.m_MeaSize = 5;
-  ka.m_USize = 9;
+  ka.m_StateSize = 9;// 状态向量维度：[x,y,a,b,θ,vx,vy,ax,ay]
+  ka.m_MeaSize = 5;// 测量向量维度：[x,y,a,b,θ]
+  ka.m_USize = 9;// 控制输入维度
 
   T = 0.1;
 
-  x.resize(9);
+  x.resize(9);//1*9的矩阵
   x.setZero();
 
+  //初始状态协方差
   float P0_cov = 0.025;
+  P0.resize(9, 9);//9*9的矩阵
+  P0.setIdentity();//单位矩阵
+  P0 *= P0_cov;//P0_cov*单位矩阵
 
-  P0.resize(9, 9);
-  P0.setIdentity();
-  P0 *= P0_cov;
-
+  //过程噪声协方差
   float Q_cov = 0.00008;
-
   Q.resize(9, 9);
   Q.setIdentity();
   Q *= Q_cov;
 
+  //测量噪声协方差
+  // R = [R_cov    0        0           0           0          ]  // x位置噪声，中等信任度
+  //   [0        R_cov    0           0           0          ]  // y位置噪声，中等信任度
+  //   [0        0        10*R_cov    0           0          ]  // a(长轴)噪声，较低信任度（10倍噪声）
+  //   [0        0        0           10*R_cov    0          ]  // b(短轴)噪声，较低信任度（10倍噪声）
+  //   [0        0        0           0           1e-8*R_cov ]  // θ(角度)噪声，很高信任度（很小的噪声）
   float R_cov = 0.0008;  //仿真 0.00005  实物  0.000003
-
   R.resize(5, 5);
   R.setZero();
 
@@ -93,16 +98,6 @@ obs_kf::obs_kf() : N(25)
   A.resize(9, 9);
   A.setIdentity();
   A(0, 5) = A(1, 6) = T;
-
-  //     A<<1,0,0,0,0,T,0,0.5*T*T,0,
-  //             0,1,0,0,0,0,T,0,0.5*T*T,
-  //             0,0,1,0,0,0,0,0,0,
-  //             0,0,0,1,0,0,0,0,0,
-  //             0,0,0,0,1,0,0,0,0,
-  //             0,0,0,0,0,1,0,T,0,
-  //             0,0,0,0,0,0,1,0,T,
-  //             0,0,0,0,0,0,0,1,0,
-  //             0,0,0,0,0,0,0,0,1;
 
   B.resize(9, 9);
   B.setZero();
@@ -179,6 +174,7 @@ void obs_kf::obs_predict()
   }
 }
 
+//在回调函数里被调用的函数
 void visEllipse(const vector<Ellipse>& obs_ellipses)
 {
   visualization_msgs::MarkerArray ellipse_vis;
@@ -244,16 +240,27 @@ void curve_fitting(obs_kf& obs, std_msgs::Float32MultiArray& obs_pub, vector<Ell
   }
 }
 
+// 订阅/local_map_pub/for_obs_track话题的回调函数
 void obscb(const std_msgs::Float32MultiArray::ConstPtr& msg)
 {
   ROS_INFO("[node] receive the obs track");
   if (msg->data.empty())
     return;
 
+  // 每个障碍物的数据格式：
+  // msg->data[7*i + 0]  // x      - 障碍物中心x坐标
+  // msg->data[7*i + 1]  // y      - 障碍物中心y坐标
+  // msg->data[7*i + 2]  // a      - 椭圆长轴长度
+  // msg->data[7*i + 3]  // b      - 椭圆短轴长度
+  // msg->data[7*i + 4]  // theta  - 椭圆旋转角度
+  // msg->data[7*i + 5]  // flag   - 障碍物ID标识
+  // msg->data[7*i + 6]  // mea_cov- 测量协方差
   int num = msg->data.size() / 7;
 
-  std_msgs::Float32MultiArray obs_pub;
-  vector<Ellipse> ellipses_array;
+  std_msgs::Float32MultiArray obs_pub;//定义要发布的预测障碍物数据
+
+  vector<Ellipse> ellipses_array;//定义一个椭圆数组
+
   for (int i = 0; i < num; i++)
   {
     int flag = msg->data[7 * i + 5];

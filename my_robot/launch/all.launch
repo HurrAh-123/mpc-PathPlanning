@@ -6,7 +6,7 @@
     <!-- 启动激光雷达障碍物检测+卡尔曼状态跟踪 -->
     <include file="$(find lidar_pkg)/launch/obs.launch"/>   
 
-    
-
+    <!-- 启动全局路径规划 -->
+    <include file="$(find global_path)/launch/global_path.launch"/>
 
 </launch>

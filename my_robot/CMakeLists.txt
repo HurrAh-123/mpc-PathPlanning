@@ -25,8 +25,8 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(${PROJECT_NAME}_node src/movetest.cpp)
+add_executable(movetest src/movetest.cpp)
 
-target_link_libraries(${PROJECT_NAME}_node
+target_link_libraries(movetest
   ${catkin_LIBRARIES}
 )
