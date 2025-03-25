@@ -1,0 +1,5 @@
+
+<launch>
+<node pkg="obs_kalman" type="obs_kalman" output="screen" name="obs_kalman" />
+
+</launch>

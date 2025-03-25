@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(obs_param)
+project(obs_kalman)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -16,9 +16,9 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(obs_kf src/obs_kf.cpp src/kalman.cpp)
+add_executable(obs_kalman src/obs_kalman.cpp src/kalman.cpp)
 
-target_link_libraries(obs_kf
+target_link_libraries(obs_kalman
   ${catkin_LIBRARIES}
 )
 

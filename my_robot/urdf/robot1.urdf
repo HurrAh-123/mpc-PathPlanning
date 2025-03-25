@@ -84,44 +84,13 @@
     <material>Gazebo/Blue</material>
   </gazebo>
 
-  <!-- 激光雷达
-<gazebo reference="lidar_link">
-  <sensor type="ray" name="rplidar_sensor">
-    <pose>0 0 0.06 0 0 0</pose>
-    <visualize>true</visualize>
-    <update_rate>10</update_rate>
-    <ray>
-      <scan>
-        <horizontal>
-          <samples>360</samples>
-          <resolution>1</resolution>
-          <min_angle>-3.14159265</min_angle>
-          <max_angle>3.14159265</max_angle>
-        </horizontal>
-      </scan>
-      <range>
-        <min>0.24</min>
-        <max>6.0</max>
-        <resolution>0.01</resolution>
-      </range>
-      <noise>
-        <type>gaussian</type>
-        <mean>0.0</mean>
-        <stddev>0.01</stddev>
-      </noise>
-    </ray>
-    <plugin name="rplidar_ros_controller" filename="libgazebo_ros_laser.so">
-      <topicName>scan</topicName>
-      <frameName>lidar_link</frameName>
-    </plugin>
-  </sensor>
-</gazebo> -->
+
 
 <!-- 3D激光雷达 -->
 <gazebo reference="lidar_link">
   <sensor type="ray" name="velodyne_sensor">
     <pose>0 0 0.06 0 0 0</pose>
-    <visualize>true</visualize>
+    <visualize>false</visualize><!-- 改为false，不显示激光线 -->
     <update_rate>10</update_rate>
     <ray>
       <scan>
@@ -135,7 +104,7 @@
           <samples>16</samples>
           <resolution>1</resolution>
           <min_angle>-0.261799</min_angle> <!-- -15度 -->
-          <max_angle>0.261799</max_angle>  <!-- +15度 -->
+          <max_angle>0</max_angle>  <!-- +15度 -->
         </vertical>
       </scan>
       <range>

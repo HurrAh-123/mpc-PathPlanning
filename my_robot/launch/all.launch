@@ -3,10 +3,16 @@
     <include file="$(find my_robot)/launch/robot1.launch"/>
     <include file="$(find my_robot)/launch/movetest_node.launch"/>
 
-    <!-- 启动激光雷达障碍物检测+卡尔曼状态跟踪 -->
-    <include file="$(find lidar_pkg)/launch/obs.launch"/>   
+    <!-- 启动激光雷达障碍物检测 -->
+    <include file="$(find lidar_pkg)/launch/lidar.launch"/>   
+
+    <!-- 启动卡尔曼状态跟踪 -->
+    <include file="$(find obs_kalman)/launch/kalman.launch"/>
 
     <!-- 启动全局路径规划 -->
     <include file="$(find global_path)/launch/global_path.launch"/>
+
+    <!-- 启动MPC局部路径规划 -->
+    <include file="$(find mpc_casadi)/launch/local_planner.launch"/>
 
 </launch>

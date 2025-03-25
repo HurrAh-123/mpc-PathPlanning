@@ -4,7 +4,7 @@
 
 #include <chrono>
 
-#include "kalman.h"
+#include "obs_kalman/kalman.hpp"
 
 using namespace std;
 using namespace Eigen;
@@ -284,9 +284,9 @@ void obscb(const std_msgs::Float32MultiArray::ConstPtr& msg)
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "obs_param_node");
+  ros::init(argc, argv, "obs_kalman");
   ros::NodeHandle n;
-  _obs_sub = n.subscribe("/local_map_pub/for_obs_track", 1, obscb);
+  _obs_sub = n.subscribe("/lidar_node/for_obs_track", 1, obscb);
   _obs_pub = n.advertise<std_msgs::Float32MultiArray>("/obs_predict_pub", 1);
   _obs_vis_pub = n.advertise<visualization_msgs::MarkerArray>("/obs_predict_vis_pub", 1);
   ros::spin();

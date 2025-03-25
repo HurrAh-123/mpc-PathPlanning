@@ -67,16 +67,16 @@ void updateTF()
       listener_ptr->waitForTransform("world", "lidar_link", ros::Time(0), ros::Duration(0.1));
       listener_ptr->lookupTransform("world", "lidar_link", ros::Time(0), lidar_link_transform);
       
-      // 打印base_link transform数据
-      ROS_INFO("Base Link Transform: x: %.2f, y: %.2f, z: %.2f", 
-               base_link_transform.getOrigin().x(),
-               base_link_transform.getOrigin().y(),
-               base_link_transform.getOrigin().z());
-      // 打印lidar_link transform数据
-      ROS_INFO("Lidar Link Transform: x: %.2f, y: %.2f, z: %.2f",
-               lidar_link_transform.getOrigin().x(),
-               lidar_link_transform.getOrigin().y(),
-               lidar_link_transform.getOrigin().z());
+      // // 打印base_link transform数据
+      // ROS_INFO("Base Link Transform: x: %.2f, y: %.2f, z: %.2f", 
+      //          base_link_transform.getOrigin().x(),
+      //          base_link_transform.getOrigin().y(),
+      //          base_link_transform.getOrigin().z());
+      // // 打印lidar_link transform数据
+      // ROS_INFO("Lidar Link Transform: x: %.2f, y: %.2f, z: %.2f",
+      //          lidar_link_transform.getOrigin().x(),
+      //          lidar_link_transform.getOrigin().y(),
+      //          lidar_link_transform.getOrigin().z());
       break;
     }
     catch (tf::TransformException &ex)

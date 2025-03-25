@@ -317,7 +317,7 @@ class Local_Planner():
             # 创建状态误差的权重矩阵Q，权重随时间步增加而增加
             # [1.0+0.05*i, 1.0+0.05*i] 分别对应x,y两个状态量的权重
             Q = np.diag([1.0+0.05*i,1.0+0.05*i])
-            obj += quadratic(opt_states[i+1, :] - self.goal_state[i], Q) + quadratic(opt_controls[i, :], R)
+            obj += quadratic(opt_states[i+1, :] - self.goal_state[[i]], Q) + quadratic(opt_controls[i, :], R)
             
 
         opti.minimize(obj)
