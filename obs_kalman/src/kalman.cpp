@@ -27,6 +27,11 @@ void Kalman::Predict_Cov()//计算先验误差协方差
   m_P = m_A * m_P * m_A.transpose() + m_Q;
 }
 
+Eigen::VectorXd Kalman::Mea_Resd(const Eigen::VectorXd& z)
+{
+  m_z = z;
+  return m_z - m_H * m_x;
+}
 
 Eigen::MatrixXd Kalman::Cal_Gain()//计算卡尔曼增益
 {
@@ -36,7 +41,7 @@ Eigen::MatrixXd Kalman::Cal_Gain()//计算卡尔曼增益
 void Kalman::Update_State()//后验估计
 {
   Eigen::MatrixXd kal_gain = Cal_Gain();
-  Eigen::VectorXd mea_res = m_z - m_H * m_x;
+  Eigen::VectorXd mea_res = Mea_Resd(m_z);
   m_x += kal_gain * mea_res;
 }
 

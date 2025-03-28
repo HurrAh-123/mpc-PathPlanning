@@ -5,8 +5,8 @@
         <param name="resolution" value="0.1"/>
         <param name="obs_height" value="0.4"/>
         <param name="step_height" value="0.5"/>
-        <param name="DBSCAN_R" value="5.0"/>
-        <param name="DBSCAN_N" value="4"/>
+        <param name="DBSCAN_R" value="6.0"/>
+        <param name="DBSCAN_N" value="5"/>
     </node>
     
 </launch>

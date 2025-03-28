@@ -140,10 +140,11 @@ void obs_kf::obs_predict()
 
     VectorXd z(5);
     z << param_list.back().x, param_list.back().y, param_list.back().a, param_list.back().b, param_list.back().theta;
+    // ka.m_z << param_list[0].x, param_list[0].y, param_list[0].a, param_list[0].b, param_list[0].theta, 0, 0, 0, 0;
 
     ka.Predict_State();
     ka.Predict_Cov();
-    
+    ka.Mea_Resd(z);
     ka.Cal_Gain();
     ka.Update_State();
     ka.Update_Cov();

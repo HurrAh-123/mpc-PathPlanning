@@ -332,7 +332,7 @@ int main(int argc, char** argv)
 
     sor.setLeafSize(0.05f, 0.05f, 0.05f);
 
-    ros::Rate rate(11);
+    ros::Rate rate(10);
     while(ros::ok())
     {
         robot_position2d << base_link_transform.getOrigin().x(), base_link_transform.getOrigin().y();

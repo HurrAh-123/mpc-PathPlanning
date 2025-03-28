@@ -57,6 +57,7 @@ public:
   void Predict_State();
   void Predict_Cov();
   Eigen::MatrixXd Cal_Gain();
+  Eigen::VectorXd Mea_Resd(const Eigen::VectorXd& z);
   void Update_State();
   void Update_Cov();
 };
