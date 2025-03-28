@@ -1,34 +1,41 @@
 <launch>
   <node pkg="my_robot" type="movetest" name="movetest" output="screen" required="true">
-      <param name="x0" type="double" value="5.0"/>
-      <param name="y0" type="double" value="4.0"/>
-      <param name="z0" type="double" value="0.25"/>
+      <param name="x0" type="double" value="-1.0"/>
+      <param name="y0" type="double" value="1.0"/>
+      <param name="z0" type="double" value="1"/>
       <param name="vx0" type="double" value="0.0"/>
       <param name="vy0" type="double" value="0.0"/>
 
-      <param name="x1" type="double" value="3.7"/>
-      <param name="y1" type="double" value="-3.7"/>
-      <param name="z1" type="double" value="0.25"/>
+      <param name="x3" type="double" value="4.5"/>
+      <param name="y3" type="double" value="-3.0"/>   
+      <param name="z3" type="double" value="1"/>  
+      <param name="vx3" type="double" value="0.0"/>
+      <param name="vy3" type="double" value="0.0"/>
+      <!-- <param name="vx3" type="double" value="-0.003"/>
+      <param name="vy3" type="double" value="0.003"/> -->
+
+      <param name="x1" type="double" value="7.0"/>
+      <param name="y1" type="double" value="2.0"/>
+      <param name="z1" type="double" value="1"/>
       <param name="vx1" type="double" value="0.0"/>
       <param name="vy1" type="double" value="0.0"/>
+      <!-- <param name="vx1" type="double" value="0.0"/>
+      <param name="vy1" type="double" value="0.001"/> -->
 
       <param name="x2" type="double" value="-4.5"/>
-      <param name="y2" type="double" value="0.5"/>
-      <param name="z2" type="double" value="0.25"/>
-      <param name="vx2" type="double" value="-0.01"/>
-      <param name="vy2" type="double" value="0.005"/>
+      <param name="y2" type="double" value="-2.0"/>
+      <param name="z2" type="double" value="1"/>
+      <param name="vx2" type="double" value="0.0"/>
+      <param name="vy2" type="double" value="0.0"/>
+      <!-- <param name="vx2" type="double" value="0"/>
+      <param name="vy2" type="double" value="0.005"/> -->
 
-      <param name="x3" type="double" value="-10.0"/>
-      <param name="y3" type="double" value="-1.9"/>   
-      <param name="z3" type="double" value="0.25"/>  
-      <param name="vx3" type="double" value="0.0"/>
-      <param name="vy3" type="double" value="0.005"/>
-
-      <!-- 1 -->
-      <param name="x4" type="double" value="7.0"/>
-      <param name="y4" type="double" value="-0.8"/>
-      <param name="z4" type="double" value="0.25"/>
-      <param name="vx4" type="double" value="-0.007"/>
+     
+      
+      <param name="x4" type="double" value="-8.0"/>
+      <param name="y4" type="double" value="1.0"/>
+      <param name="z4" type="double" value="1"/>
+      <param name="vx4" type="double" value="0.0"/>
       <param name="vy4" type="double" value="0.0"/>
 
   </node>

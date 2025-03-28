@@ -7,6 +7,7 @@ Panels:
         - /Global Options1
         - /Status1
         - /Path2
+        - /Grid1
       Splitter Ratio: 0.5
     Tree Height: 602
   - Class: rviz/Selection
@@ -148,6 +149,24 @@ Visualization Manager:
         ellipse: true
       Queue Size: 100
       Value: true
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 20
+      Reference Frame: <Fixed Frame>
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 238; 238; 236
@@ -213,4 +232,4 @@ Window Geometry:
     collapsed: false
   Width: 1621
   X: 262
-  Y: 143
+  Y: 106

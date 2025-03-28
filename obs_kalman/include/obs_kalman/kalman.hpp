@@ -17,7 +17,7 @@ public:
   Eigen::MatrixXd m_Q;
   Eigen::MatrixXd m_iden_mat;
 
-public:
+
   Kalman() = default;
   Kalman(int statesize, int measize, int usize) : m_StateSize(statesize), m_MeaSize(measize), m_USize(usize)
   {
@@ -56,7 +56,6 @@ public:
                 Eigen::MatrixXd& B, Eigen::MatrixXd& H, Eigen::VectorXd& u);
   void Predict_State();
   void Predict_Cov();
-  Eigen::VectorXd Mea_Resd(const Eigen::VectorXd& z);
   Eigen::MatrixXd Cal_Gain();
   void Update_State();
   void Update_Cov();

@@ -1,8 +1,8 @@
 <launch>
     <node pkg="lidar_pkg" type="lidar_node" output="screen" name="lidar_node">  
-        <param name="localmap_x_size" value="5"/>  
-        <param name="localmap_y_size" value="5"/>
-        <param name="resolution" value="0.05"/>
+        <param name="localmap_x_size" value="10"/>  
+        <param name="localmap_y_size" value="10"/>
+        <param name="resolution" value="0.1"/>
         <param name="obs_height" value="0.4"/>
         <param name="step_height" value="0.5"/>
         <param name="DBSCAN_R" value="5.0"/>

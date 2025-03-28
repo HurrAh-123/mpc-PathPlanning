@@ -171,7 +171,7 @@ class Local_Planner():
         # 采样时间
         T = 0.1
         #CBF约束参数
-        gamma_k = 0.3
+        gamma_k = 0.1
 
         v_max = 1.2#最大速度
         v_min = -1.2#最小速度

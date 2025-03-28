@@ -58,18 +58,26 @@ int main(int argc, char** argv)
     pose_stamped.pose.orientation.z = 0;
     pose_stamped.pose.orientation.w = 1;
 
-    int idx = 0;
-    for (double i = 0.0; i < dist; i += step)
-    {
-      pose_stamped.header.seq = idx++;
+    // int idx = 0;
+    // for (double i = 0.0; i < dist; i += step)
+    // {
+    //   pose_stamped.header.seq = idx++;
 
-      Vector2d waypoint = start_pos + i * diff;
-      pose_stamped.pose.position.x = waypoint.x();
-      pose_stamped.pose.position.y = waypoint.y();
-      pose_stamped.pose.position.z = 0;
+    //   Vector2d waypoint = start_pos + i * diff;
+    //   pose_stamped.pose.position.x = waypoint.x();
+    //   pose_stamped.pose.position.y = waypoint.y();
+    //   pose_stamped.pose.position.z = 0;
 
-      global_path.poses.push_back(pose_stamped);
-    }
+    //   global_path.poses.push_back(pose_stamped);
+    // }
+
+    pose_stamped.header.seq = 0;
+    
+    pose_stamped.pose.position.x = waypoint_pos.x();
+    pose_stamped.pose.position.y = waypoint_pos.y();
+    pose_stamped.pose.position.z = 0;
+
+    global_path.poses.push_back(pose_stamped);
 
     waypoint_set = false;
     ROS_INFO("start_pos: %f, %f", start_pos.x(), start_pos.y());

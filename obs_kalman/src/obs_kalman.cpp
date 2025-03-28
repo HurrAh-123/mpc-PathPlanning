@@ -39,7 +39,7 @@ public:
   int N;
   float T;
 
-  Kalman ka;
+  Kalman ka;//卡尔曼滤波器这一整个类
   std::vector<obs_param> param_list;
   std::vector<obs_param> pred_list;
   Eigen::VectorXd x; //未定义大小的向量
@@ -143,7 +143,7 @@ void obs_kf::obs_predict()
 
     ka.Predict_State();
     ka.Predict_Cov();
-    ka.Mea_Resd(z);
+    
     ka.Cal_Gain();
     ka.Update_State();
     ka.Update_Cov();
@@ -243,7 +243,7 @@ void curve_fitting(obs_kf& obs, std_msgs::Float32MultiArray& obs_pub, vector<Ell
 // 订阅/local_map_pub/for_obs_track话题的回调函数
 void obscb(const std_msgs::Float32MultiArray::ConstPtr& msg)
 {
-  ROS_INFO("[node] receive the obs track");
+  
   if (msg->data.empty())
     return;
 

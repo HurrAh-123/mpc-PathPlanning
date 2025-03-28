@@ -53,7 +53,6 @@ float step_height;
 float obs_height;
 
 int block_size;
-int block_num;
 
 // 更新机器人和激光雷达坐标
 void updateTF()
@@ -304,7 +303,7 @@ int main(int argc, char** argv)
     // 参数服务器
     nh.param<float>("localmap_x_size", localmap_x_size, 10);//x方向10m
     nh.param<float>("localmap_y_size", localmap_y_size, 10);//y方向10m
-    nh.param<float>("resolution", resolution, 0.05);//地图0.1m一格
+    nh.param<float>("resolution", resolution, 0.1);//地图0.1m一格
 
     nh.param<float>("obs_height", obs_height, 0.4);
     nh.param<float>("step_height", step_height, 0.5);
@@ -312,7 +311,6 @@ int main(int argc, char** argv)
     nh.param<int>("DBSCAN_N", DBSCAN_N, 5);
 
     nh.param<int>("block_size", block_size, localmap_x_size * _inv_resolution * 0.2);//20
-    nh.param<int>("block_num", block_num, 5);
 
     _inv_resolution = 1 / resolution;
     int map_index_len = localmap_x_size * _inv_resolution;//100
