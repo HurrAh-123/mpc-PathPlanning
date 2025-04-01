@@ -171,7 +171,7 @@ class Local_Planner():
         # 采样时间
         T = 0.1
         #CBF约束参数
-        gamma_k = 0.1
+        gamma_k = 0.05
 
         v_max = 1.2#最大速度
         v_min = -1.2#最小速度
@@ -311,7 +311,7 @@ class Local_Planner():
         # - R = diag([0.1, 0.02]) 是一个2×2的对角矩阵
         # - 0.1是对线速度v的惩罚权重
         # - 0.02是对角速度ω的惩罚权重
-        R = np.diag([0.1, 0.02])
+        R = np.diag([0.4, 0.4])
 
         for i in range(self.N):
             # 创建状态误差的权重矩阵Q，权重随时间步增加而增加

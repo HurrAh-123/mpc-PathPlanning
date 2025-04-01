@@ -19,63 +19,163 @@
 using namespace grid_map;
 using namespace std;
 
-GridMap map_({"elevation", "local_lidar", "gradient_map"});
+class LidarNode_N
+{
+private:
+    ros::NodeHandle nh;
 
-//点云数据存储
-pcl::PointCloud<pcl::PointXYZ> velodyne_cloud; // 原始激光雷达点云数据
-pcl::PointCloud<pcl::PointXYZ> velodyne_cloud_filter;// 经过滤波后的点云数据
-pcl::PointCloud<pcl::PointXYZ> velodyne_cloud_global;// 转换到世界坐标系下的点云数据
-// 点云滤波器
-pcl::PassThrough<pcl::PointXYZ> pass_x; // X方向的直通滤波器，用于裁剪X方向上的点云
-pcl::PassThrough<pcl::PointXYZ> pass_y; // Y方向的直通滤波器，用于裁剪Y方向上的点云
-pcl::VoxelGrid<pcl::PointXYZ> sor; // 体素滤波器，用于降采样点云，减少数据量
+    const int robot_n = 5;  // 机器人数量
 
-tf::TransformListener *listener_ptr = nullptr;
-tf::StampedTransform base_link_transform;//存储机器人基座（base_link）相对于世界坐标系（world）的变换
-tf::StampedTransform lidar_link_transform;//存储激光雷达（velodyne）相对于世界坐标系（world）的变换
-Eigen::Vector2d robot_position2d;//机器人坐标
+    float localmap_x_size;  
+    float localmap_y_size;
+    float resolution;       
+    int block_size;        
+    float obs_height;      
+    float step_height;     
+    float DBSCAN_R;       
+    int DBSCAN_N;
 
-//话题的订阅和发布
-ros::Subscriber velodyne_sub;
-ros::Publisher gridmap_pub;
-ros::Publisher ellipse_vis_pub;
-ros::Publisher local_pcd_pub;
-ros::Publisher for_obs_track_pub;
+    //tf变换相关
+    tf::TransformListener listener;     //初始化tf监听器
+    std::vector<tf::StampedTransform> base_link_transforms;//底盘
+    std::vector<tf::StampedTransform> lidar_link_transforms;//雷达
 
-//变量定义
-KMAlgorithm KM;
+    std::vector<Eigen::Vector2d> robot_positions;
 
-// DBSCAN param
-float DBSCAN_R;
-int DBSCAN_N;
+    //话题的订阅和发布
+    std::vector<ros::Subscriber> velodyne_subs;  // 订阅多个3维点云
+    std::vector<ros::Publisher> local_pcd_pubs;//发布多个点云,转换成世界坐标系下的点云
+    std::vector<ros::Publisher> for_obs_track_pubs;//发布多个障碍物跟踪信息
 
-float step_height;
-float obs_height;
+    //地图数据
+    std::vector<GridMap> maps;
+    std::vector<Eigen::MatrixXf> lidar_pcd_matrices;
+    std::vector<Eigen::MatrixXf> elevation_matrices;
+    std::vector<Eigen::MatrixXf> gradient_matrices;
 
-int block_size;
+    //点云数据
+    std::vector<pcl::PointCloud<pcl::PointXYZ>> velodyne_clouds; // 存储多个点云数据（原始）
+    std::vector<pcl::PointCloud<pcl::PointXYZ>> velodyne_clouds_filter;// 存储多个点云数据（经过滤波）
+    std::vector<pcl::PointCloud<pcl::PointXYZ>> velodyne_clouds_global;// 存储多个点云数据（转换到世界坐标系）
+
+    // 点云滤波器(用同一个就可以了)
+    pcl::PassThrough<pcl::PointXYZ> pass_x; // X方向的直通滤波器，用于裁剪X方向上的点云
+    pcl::PassThrough<pcl::PointXYZ> pass_y; // Y方向的直通滤波器，用于裁剪Y方向上的点云
+    pcl::VoxelGrid<pcl::PointXYZ> sor; // 体素滤波器，用于降采样点云，减少数据量
+
+
+public:
+    LidarNode_N()
+    {
+      
+      robot_positions.resize(robot_n);
+      base_link_transforms.resize(robot_n);
+      lidar_link_transforms.resize(robot_n);
+
+      velodyne_clouds.resize(robot_n);
+      velodyne_clouds_filter.resize(robot_n);
+      velodyne_clouds_global.resize(robot_n);
+
+      maps.resize(robot_n);
+      lidar_pcd_matrices.resize(robot_n);
+      elevation_matrices.resize(robot_n);
+      gradient_matrices.resize(robot_n);
+
+      //初始化sub和pub
+      velodyne_subs.resize(robot_n);//初始化容器
+      local_pcd_pubs.resize(robot_n);
+      for_obs_track_pubs.resize(robot_n);
+
+
+     
+      //从参数服务器获取数据
+      nh.param<float>("localmap_x_size", localmap_x_size, 10);//x方向10m
+      nh.param<float>("localmap_y_size", localmap_y_size, 10);//y方向10m
+      nh.param<float>("resolution", resolution, 0.1);//地图0.1m一格
+      nh.param<int>("block_size", block_size, localmap_x_size /resolution * 0.2);//20
+
+      nh.param<float>("obs_height", obs_height, 0.4);
+      nh.param<float>("step_height", step_height, 0.5);
+
+      nh.param<float>("DBSCAN_R", DBSCAN_R, 5.0);
+      nh.param<int>("DBSCAN_N", DBSCAN_N, 5);
+
+      
+      for (int i = 0; i < robot_n; ++i)
+      {
+        velodyne_subs.push_back(nh.subscribe<sensor_msgs::PointCloud2>(
+            "/robot" + std::to_string(i) + "/velodyne_points", 1, 
+            [this,i](sensor_msgs::PointCloud2::ConstPtr msg) 
+            { pcl::fromROSMsg(*msg, velodyne_clouds[i]); updateTF(i); }));
+
+        local_pcd_pubs[i] = nh.advertise<sensor_msgs::PointCloud2>(
+            "/robot" + std::to_string(i) + "/local_pcd", 1);
+        for_obs_track_pubs[i] = nh.advertise<std_msgs::Float32MultiArray>(
+            "/robot" + std::to_string(i) + "/for_obs_track", 1);
+      }
+
+      //初始化地图
+      int map_index_len = localmap_x_size /resolution;//100,x方向格子数
+
+      for (int i = 0; i < robot_n; ++i)
+      {
+        //local_lidar是高度地图数据
+        //elevation是插值+膨胀后的local_lidar
+        //gradient_map是梯度地图
+        maps.push_back(GridMap({"local_lidar","elevation", "gradient_map"}));
+        maps[i].setFrameId("world");//设置栅格地图的坐标系为"world"
+        maps[i].setGeometry(Length(localmap_x_size, localmap_y_size), resolution);//长宽、格子大小
+      
+        //初始化存地图数据的矩阵
+        lidar_pcd_matrices.push_back(Eigen::MatrixXf(map_index_len, map_index_len));
+        elevation_matrices.push_back(Eigen::MatrixXf(map_index_len, map_index_len));
+        gradient_matrices.push_back(Eigen::MatrixXf(map_index_len, map_index_len));
+      }
+
+      //点云滤波器参数设置
+      pass_x.setFilterFieldName("x");
+      pass_x.setFilterLimits(-localmap_x_size / 2, localmap_x_size / 2);
+      pass_y.setFilterFieldName("y");
+      pass_y.setFilterLimits(-localmap_y_size / 2, localmap_y_size / 2);
+      sor.setLeafSize(0.05f, 0.05f, 0.05f);
+
+    }
+
+    //成员函数
+    void updateTF(int robot_id);//更新tf
+    void pcd_transform(int robot_id);//点云滤波+转换到世界坐标系
+    void lidar2gridmap(Eigen::MatrixXf &lidar_data_matrix , int robot_id);//雷达信息转换成栅格地图
+    
+    Eigen::MatrixXf map_interpolation(const Eigen::MatrixXf &map_data);//对栅格地图进行插值处理
+    void map_inflate_block(Eigen::MatrixXf &dst, const Eigen::MatrixXf &src, int startRow, int startCol, int radius);//对栅格地图进行膨胀处理
+    Eigen::MatrixXf map_inflate(const Eigen::MatrixXf &map_data);//对栅格地图进行膨胀处理
+    
+    Eigen::MatrixXf gradient_map_processing(Eigen::MatrixXf &map_data, vector<DBSCAN::Point> &dataset);//用来检测和识别障碍物
+    
+    void loop_process(int robot_id);//主处理函数
+    
+    //成员变量
+    KMAlgorithm KM;
+};
+
 
 // 更新机器人和激光雷达坐标
-void updateTF()
+void LidarNode_N::updateTF(int robot_id)
 {
   while (true)
   {
     try
     {
-      listener_ptr->waitForTransform("world", "base_link", ros::Time(0), ros::Duration(0.1));
-      listener_ptr->lookupTransform("world", "base_link", ros::Time(0), base_link_transform);
-      listener_ptr->waitForTransform("world", "lidar_link", ros::Time(0), ros::Duration(0.1));
-      listener_ptr->lookupTransform("world", "lidar_link", ros::Time(0), lidar_link_transform);
-      
-      // // 打印base_link transform数据
-      // ROS_INFO("Base Link Transform: x: %.2f, y: %.2f, z: %.2f", 
-      //          base_link_transform.getOrigin().x(),
-      //          base_link_transform.getOrigin().y(),
-      //          base_link_transform.getOrigin().z());
-      // // 打印lidar_link transform数据
-      // ROS_INFO("Lidar Link Transform: x: %.2f, y: %.2f, z: %.2f",
-      //          lidar_link_transform.getOrigin().x(),
-      //          lidar_link_transform.getOrigin().y(),
-      //          lidar_link_transform.getOrigin().z());
+      listener.waitForTransform("world", "robot" + std::to_string(robot_id) + "/base_link", ros::Time(0), ros::Duration(0.1));
+      listener.lookupTransform("world", "robot" + std::to_string(robot_id) + "/base_link", ros::Time(0), base_link_transforms[robot_id]);
+      listener.waitForTransform("world", "robot" + std::to_string(robot_id) + "/lidar_link", ros::Time(0), ros::Duration(0.1));
+      listener.lookupTransform("world", "robot" + std::to_string(robot_id) + "/lidar_link", ros::Time(0), lidar_link_transforms[robot_id]);
+
+      // 更新机器人位置，雷达的要在三维点云转换成世界坐标系那个函数里面用
+      robot_positions[robot_id] = Eigen::Vector2d(
+        base_link_transforms[robot_id].getOrigin().x(), 
+        base_link_transforms[robot_id].getOrigin().y());
+
       break;
     }
     catch (tf::TransformException &ex)
@@ -87,35 +187,35 @@ void updateTF()
   }
 }
 
-void pcd_transform()
+void LidarNode_N::pcd_transform(int robot_id)
 {
   // 对X方向进行直通滤波，结果存回velodyne_cloud，makeShared()创建一个点云的共享指针
-  pass_x.setInputCloud(velodyne_cloud.makeShared());
-  pass_x.filter(velodyne_cloud);
+  pass_x.setInputCloud(velodyne_clouds[robot_id].makeShared());
+  pass_x.filter(velodyne_clouds[robot_id]);
 
-  pass_y.setInputCloud(velodyne_cloud.makeShared());
-  pass_y.filter(velodyne_cloud);
+  pass_y.setInputCloud(velodyne_clouds[robot_id].makeShared());
+  pass_y.filter(velodyne_clouds[robot_id]);
 
   
-  velodyne_cloud_filter.clear();// 清空用于存储体素滤波结果的点云
-  sor.setInputCloud(velodyne_cloud.makeShared());// 将经过XY方向滤波的点云设置为体素滤波器的输入
-  sor.filter(velodyne_cloud_filter);//进行体素滤波，结果存储在velodyne_cloud_filter中
+  velodyne_clouds_filter[robot_id].clear();// 清空用于存储体素滤波结果的点云
+  sor.setInputCloud(velodyne_clouds[robot_id].makeShared());// 将经过XY方向滤波的点云设置为体素滤波器的输入
+  sor.filter(velodyne_clouds_filter[robot_id]);//进行体素滤波，结果存储在velodyne_cloud_filter中
 
   Eigen::Affine3d affine_transform;
-  tf::transformTFToEigen(lidar_link_transform, affine_transform);
-  pcl::transformPointCloud(velodyne_cloud_filter, velodyne_cloud_global, affine_transform);
+  tf::transformTFToEigen(lidar_link_transforms[robot_id], affine_transform);
+  pcl::transformPointCloud(velodyne_clouds_filter[robot_id], velodyne_clouds_global[robot_id], affine_transform);
 }
 
-//雷达信息转换成栅格地图
-void lidar2gridmap(Eigen::MatrixXf &lidar_data_matrix)
+//雷达信息转换成栅格地图，传入的是一个空矩阵，返回的是一个填充好的矩阵
+void LidarNode_N::lidar2gridmap(Eigen::MatrixXf &lidar_data_matrix , int robot_id)
 {
   int col = lidar_data_matrix.cols();//100
   int row = lidar_data_matrix.rows();//100
-  for (const auto &pt : velodyne_cloud_global)
+  for (const auto &pt : velodyne_clouds_global[robot_id])
   {
-    int j = (pt.x - robot_position2d.x()) * _inv_resolution + col * 0.5;
+    int j = (pt.x - robot_positions[robot_id].x()) / resolution + col * 0.5;
     j = min(max(j, 0), row - 1);//确保计算出的索引不会超出地图边界
-    int k = (pt.y - robot_position2d.y()) * _inv_resolution + row * 0.5;
+    int k = (pt.y - robot_positions[robot_id].y()) / resolution + row * 0.5;
     k = min(max(k, 0), col - 1);
 
     if (std::isnan(lidar_data_matrix(row - 1 - j, col - 1 - k)))
@@ -126,7 +226,7 @@ void lidar2gridmap(Eigen::MatrixXf &lidar_data_matrix)
 }
 
 //对栅格地图进行插值处理
-Eigen::MatrixXf map_interpolation(const Eigen::MatrixXf &map_data)
+Eigen::MatrixXf LidarNode_N::map_interpolation(const Eigen::MatrixXf &map_data)
 {
   int col = map_data.cols(), row = map_data.rows();
   Eigen::MatrixXf map_interpolation(map_data);
@@ -157,7 +257,7 @@ Eigen::MatrixXf map_interpolation(const Eigen::MatrixXf &map_data)
 }
 
 // 对栅格地图进行膨胀处理
-void map_inflate_block(Eigen::MatrixXf &dst, const Eigen::MatrixXf &src, int startRow, int startCol, int radius)
+void LidarNode_N::map_inflate_block(Eigen::MatrixXf &dst, const Eigen::MatrixXf &src, int startRow, int startCol, int radius)
 {
   for (int k = 0; k <= 2 * radius; k++)
   {
@@ -172,7 +272,7 @@ void map_inflate_block(Eigen::MatrixXf &dst, const Eigen::MatrixXf &src, int sta
 }
 
 // 对栅格地图进行膨胀处理
-Eigen::MatrixXf map_inflate(const Eigen::MatrixXf &map_data)
+Eigen::MatrixXf LidarNode_N::map_inflate(const Eigen::MatrixXf &map_data)
 {
   int col = map_data.cols(), row = map_data.rows();
   Eigen::MatrixXf map_inflated(map_data);
@@ -222,7 +322,7 @@ Eigen::MatrixXf map_inflate(const Eigen::MatrixXf &map_data)
 //    - 这些点满足以下任一条件：
 //      - 梯度值大于obs_height + threshold（陡峭障碍物）
 //      - 与周围最低点的高度差大于step_height（台阶障碍物）
-Eigen::MatrixXf gradient_map_processing(Eigen::MatrixXf &map_data, vector<DBSCAN::Point> &dataset)
+Eigen::MatrixXf LidarNode_N::gradient_map_processing(Eigen::MatrixXf &map_data, vector<DBSCAN::Point> &dataset)
 {
   const float threshold = -1.25;
   int col = map_data.cols(), row = map_data.rows();
@@ -285,123 +385,95 @@ Eigen::MatrixXf gradient_map_processing(Eigen::MatrixXf &map_data, vector<DBSCAN
   return gradient_map;
 }
 
+
+void LidarNode_N::loop_process(int robot_id)
+{
+  pcd_transform(robot_id);
+
+  maps[robot_id].setPosition(robot_positions[robot_id]);
+  maps[robot_id].clear("local_lidar");
+  lidar_pcd_matrices[robot_id] = maps[robot_id].get("local_lidar");
+  lidar2gridmap(lidar_pcd_matrices[robot_id], robot_id);
+
+  maps[robot_id].add("local_lidar", lidar_pcd_matrices[robot_id]);
+
+  elevation_matrices[robot_id] = map_interpolation(lidar_pcd_matrices[robot_id]);
+  elevation_matrices[robot_id] = map_inflate(elevation_matrices[robot_id]);
+  maps[robot_id].add("elevation", elevation_matrices[robot_id]);
+
+   // obs map
+  vector<DBSCAN::Point> non_clustered_obs;
+  gradient_matrices[robot_id] = gradient_map_processing(elevation_matrices[robot_id], non_clustered_obs);
+
+  // DBSCAN
+  DBSCAN DS(DBSCAN_R, DBSCAN_N, non_clustered_obs);
+  vector<Obstacle> clustered_obs(DS.cluster_num);
+  for (const auto &obs : non_clustered_obs)
+    {
+      if (obs.obsID > 0)
+      {
+        gradient_matrices[robot_id](obs.x, obs.y) = -0.3;
+        clustered_obs[obs.obsID - 1].emplace_back(obs.x, obs.y);
+      }
+    }    
+
+  // get MSE椭圆方差计算
+  vector<Ellipse> ellipses_array = get_ellipse_array(clustered_obs, maps[robot_id]);
+  KM.tracking(ellipses_array);
+  ab_variance_calculation(ellipses_array);
+        
+  // 发布障碍物跟踪信息
+  std_msgs::Float32MultiArray for_obs_track;
+  for (const auto &ellipse : ellipses_array)
+    {
+      if (ellipse.label == 0)
+          continue;
+
+      for_obs_track.data.push_back(ellipse.cx);
+      for_obs_track.data.push_back(ellipse.cy);
+      for_obs_track.data.push_back(ellipse.semimajor);
+      for_obs_track.data.push_back(ellipse.semiminor);
+      for_obs_track.data.push_back(ellipse.theta);
+      for_obs_track.data.push_back(ellipse.label);
+      for_obs_track.data.push_back(ellipse.variance);
+    }
+  for_obs_track_pubs[robot_id].publish(for_obs_track);
+
+  // 发布世界坐标系下的点云数据
+  sensor_msgs::PointCloud2 local_velodyne_msg;
+  pcl::toROSMsg(velodyne_clouds_global[robot_id], local_velodyne_msg);
+  local_velodyne_msg.header.stamp = ros::Time::now();
+  local_velodyne_msg.header.frame_id = "world";
+  local_pcd_pubs[robot_id].publish(local_velodyne_msg);
+
+
+
+
+}
+
 int main(int argc, char** argv)
 {
     setlocale(LC_ALL,"");//设置语言为中文
     ros::init(argc,argv,"lidar_node");
     ros::Time::init();
-    ros::NodeHandle nh("~");
-    // 发布、订阅
-    gridmap_pub = nh.advertise<grid_map_msgs::GridMap>("gridmap", 1, true);
-    local_pcd_pub = nh.advertise<sensor_msgs::PointCloud2>("local_pcd", 1);
-    ellipse_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("ellipse_vis", 1);
-    for_obs_track_pub = nh.advertise<std_msgs::Float32MultiArray>("for_obs_track", 1);
-    velodyne_sub = nh.subscribe<sensor_msgs::PointCloud2>("/velodyne_points", 1, [&](sensor_msgs::PointCloud2::ConstPtr msg)
-  {  pcl::fromROSMsg(*msg, velodyne_cloud);    
-  updateTF(); });//updateTF()是雷达数据订阅的回调函数，updateTF() 本身不是回调函数，它只是在点云数据的回调函数中被调用的一个普通函数。
 
-    // 参数服务器
-    nh.param<float>("localmap_x_size", localmap_x_size, 10);//x方向10m
-    nh.param<float>("localmap_y_size", localmap_y_size, 10);//y方向10m
-    nh.param<float>("resolution", resolution, 0.1);//地图0.1m一格
-
-    nh.param<float>("obs_height", obs_height, 0.4);
-    nh.param<float>("step_height", step_height, 0.5);
-    nh.param<float>("DBSCAN_R", DBSCAN_R, 5.0);
-    nh.param<int>("DBSCAN_N", DBSCAN_N, 5);
-
-    nh.param<int>("block_size", block_size, localmap_x_size * _inv_resolution * 0.2);//20
-
-    _inv_resolution = 1 / resolution;
-    int map_index_len = localmap_x_size * _inv_resolution;//100
-
-    tf::TransformListener listener;
-    listener_ptr = &listener;
-
-    // grid_map初始化
-    map_.setFrameId("world");//设置栅格地图的坐标系为"world"
-    map_.setGeometry(Length(localmap_x_size, localmap_y_size), resolution);//长宽、格子大小
-    Eigen::MatrixXf lidar_pcd_matrix(map_index_len, map_index_len);//3个100*100的矩阵，用来存储地图数据
-    Eigen::MatrixXf map_interpolate(map_index_len, map_index_len);
-    Eigen::MatrixXf gradient_map(map_index_len, map_index_len);
-
-    pass_x.setFilterFieldName("x");
-    pass_x.setFilterLimits(-localmap_x_size / 2, localmap_x_size / 2);
-    pass_y.setFilterFieldName("y");
-    pass_y.setFilterLimits(-localmap_y_size / 2, localmap_y_size / 2);
-
-    sor.setLeafSize(0.05f, 0.05f, 0.05f);
-
+    LidarNode_N lidar_node;
+    
     ros::Rate rate(10);
+
+    
+
+  
     while(ros::ok())
     {
-        robot_position2d << base_link_transform.getOrigin().x(), base_link_transform.getOrigin().y();
-        pcd_transform();
-        map_.setPosition(robot_position2d);
-        map_.clear("local_lidar");
-        lidar_pcd_matrix = map_.get("local_lidar");
-        lidar2gridmap(lidar_pcd_matrix);
-        map_.add("local_lidar", lidar_pcd_matrix);
-
-        map_interpolate = map_interpolation(lidar_pcd_matrix);
-        map_interpolate = map_inflate(map_interpolate);
-        map_.add("elevation", map_interpolate);
-
-        // obs map
-        vector<DBSCAN::Point> non_clustered_obs;
-        gradient_map = gradient_map_processing(map_interpolate, non_clustered_obs);
-
-        // DBSCAN
-        DBSCAN DS(DBSCAN_R, DBSCAN_N, non_clustered_obs);
-        vector<Obstacle> clustered_obs(DS.cluster_num);
-        for (const auto &obs : non_clustered_obs)
-        {
-        if (obs.obsID > 0)
-        {
-            gradient_map(obs.x, obs.y) = -0.3;
-            clustered_obs[obs.obsID - 1].emplace_back(obs.x, obs.y);
-        }
-        }    
-
-        // get MSE椭圆方差计算
-        vector<Ellipse> ellipses_array = get_ellipse_array(clustered_obs, map_);
-        KM.tracking(ellipses_array);
-        ab_variance_calculation(ellipses_array);
-        
-        // publish
-        std_msgs::Float32MultiArray for_obs_track;
-        for (const auto &ellipse : ellipses_array)
-        {
-        if (ellipse.label == 0)
-            continue;
-
-        for_obs_track.data.push_back(ellipse.cx);
-        for_obs_track.data.push_back(ellipse.cy);
-        for_obs_track.data.push_back(ellipse.semimajor);
-        for_obs_track.data.push_back(ellipse.semiminor);
-        for_obs_track.data.push_back(ellipse.theta);
-        for_obs_track.data.push_back(ellipse.label);
-        for_obs_track.data.push_back(ellipse.variance);
-        }
-        for_obs_track_pub.publish(for_obs_track);
-
-        // 发布世界坐标系下的点云数据
-        sensor_msgs::PointCloud2 local_velodyne_msg;
-        pcl::toROSMsg(velodyne_cloud_global, local_velodyne_msg);
-        local_velodyne_msg.header.stamp = ros::Time::now();
-        local_velodyne_msg.header.frame_id = "world";
-        local_pcd_pub.publish(local_velodyne_msg);
-
-        // 发布栅格地图
-        grid_map_msgs::GridMap gridMapMessage;
-        grid_map::GridMapRosConverter::toMessage(map_, gridMapMessage);
-        gridmap_pub.publish(gridMapMessage);
-
-        // 发布椭圆数据
-        visEllipse(ellipses_array, ellipse_vis_pub);
-
-        ros::spinOnce();
-        rate.sleep();
+      lidar_node.loop_process(0); 
+      lidar_node.loop_process(1);
+      lidar_node.loop_process(2);
+      lidar_node.loop_process(3);
+      lidar_node.loop_process(4);
+     
+      ros::spinOnce();
+      rate.sleep();
     }
     return 0;
 }

@@ -1,12 +1,32 @@
 <launch>
 
-  <!-- 机器人坐标 -->
-  <arg name="x" default="-10.0"/>
-  <arg name="y" default="0.0"/>
-  <arg name="z" default="0.05"/>
+  <!-- 机器人0坐标 -->
+  <arg name="robot0_x" default="-10.0"/>
+  <arg name="robot0_y" default="0.0"/>
+  <arg name="robot0_z" default="0.05"/>
 
-  <!-- 加载URDF到参数服务器 -->
-  <param name="robot_description" textfile="$(find my_robot)/urdf/robot1.urdf" />
+
+  <!-- 机器人1坐标 -->
+  <arg name="robot1_x" default="-10.0"/>
+  <arg name="robot1_y" default="1.0"/>
+  <arg name="robot1_z" default="0.05"/>
+
+
+  <!-- 机器人2坐标 -->
+  <arg name="robot2_x" default="-10.0"/>
+  <arg name="robot2_y" default="2.0"/>
+  <arg name="robot2_z" default="0.05"/> 
+
+  <!-- 机器人3坐标 -->
+  <arg name="robot3_x" default="-10.0"/>
+  <arg name="robot3_y" default="-1.0"/>
+  <arg name="robot3_z" default="0.05"/>
+
+  <!-- 机器人4坐标 -->      
+  <arg name="robot4_x" default="-10.0"/>
+  <arg name="robot4_y" default="-2.0"/>
+  <arg name="robot4_z" default="0.05"/>
+  
 
   <!-- 启动Gazebo -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -15,14 +35,79 @@
     <arg name="use_sim_time" value="true"/>
   </include>
 
-  <!-- 在Gazebo中生成机器人 -->
-  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" 
-        args="-urdf -model robot1 -param robot_description -x $(arg x) -y $(arg y) -z $(arg z)" />
 
-  <!-- 发布关节状态 -->
-  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
-  <!-- 发布机器人状态 -->
-  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+  <!-- 机器人0 -->
+  <group ns="robot0">
+    <param name="robot_description" command="$(find xacro)/xacro $(find my_robot)/urdf/multi.urdf.xacro
+                 ns:=robot0" />
+    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" 
+          args="-urdf -model robot0 -param robot_description 
+          -x $(arg robot0_x) -y $(arg robot0_y) -z $(arg robot0_z)
+          " />
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen">
+     
+    </node>
+  </group>
+
+  <!-- 机器人1 -->
+  <group ns="robot1">
+    <!-- 加载URDF到参数服务器 -->
+    <param name="robot_description" command="$(find xacro)/xacro $(find my_robot)/urdf/multi.urdf.xacro
+                 ns:=robot1" />
+    <!-- 在Gazebo中生成机器人 -->
+    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" 
+          args="-urdf -model robot1 -param robot_description 
+          -x $(arg robot1_x) -y $(arg robot1_y) -z $(arg robot1_z)
+          " />
+    <!-- 发布关节状态 -->
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+    <!-- 发布机器人状态 -->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen">
+    </node>
+  </group>
+
+
+  <!-- 机器人2 -->
+  <group ns="robot2">
+    <param name="robot_description" command="$(find xacro)/xacro $(find my_robot)/urdf/multi.urdf.xacro
+                 ns:=robot2" />
+    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" 
+          args="-urdf -model robot2 -param robot_description 
+          -x $(arg robot2_x) -y $(arg robot2_y) -z $(arg robot2_z)
+          " />
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen">
+    </node>
+  </group>
+
+  <!-- 机器人3 -->
+  <group ns="robot3">
+    <param name="robot_description" command="$(find xacro)/xacro $(find my_robot)/urdf/multi.urdf.xacro
+                 ns:=robot3" />
+    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" 
+          args="-urdf -model robot3 -param robot_description 
+          -x $(arg robot3_x) -y $(arg robot3_y) -z $(arg robot3_z)" />
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen">
+
+    </node>
+  </group>
+
+  <!-- 机器人4 -->
+  <group ns="robot4">
+    <param name="robot_description" command="$(find xacro)/xacro $(find my_robot)/urdf/multi.urdf.xacro
+                 ns:=robot4" />
+    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" 
+          args="-urdf -model robot4 -param robot_description 
+          -x $(arg robot4_x) -y $(arg robot4_y) -z $(arg robot4_z)
+          " />
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen">
+    </node>
+  </group>
+
+
   <!--rviz-->
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find my_robot)/rviz/1.rviz"/>
 </launch>
